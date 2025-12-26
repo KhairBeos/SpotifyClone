@@ -25,6 +25,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "http://localhost:4000"
+    },
+    "plugins": [
+      "react-native-track-player"
+    ]
   }
 }
