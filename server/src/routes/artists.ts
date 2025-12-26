@@ -7,25 +7,30 @@ const router = Router();
 router.get('/', async (_req, res) => {
   const sb = getSupabase();
   if (!sb) return res.status(500).json({ error: 'supabase_not_configured' });
-  const { data, error } = await sb.from('tracks').select('artists, spotify_image_url');
+  const { data, error } = await sb.from('artists').select('*').order('name', { ascending: true });
   if (error) return res.status(500).json({ error: error.message });
-  const map = new Map<string, { id: string; name: string; images?: string | null }>();
-  for (const t of data || []) {
-    const artists = (t as any).artists as string[] | null;
-    if (!artists || !artists.length) continue;
-    const name = artists[0];
-    const id = artistIdFrom(name);
-    if (!map.has(id)) {
-      const img = (t as any).spotify_image_url as string | null;
-      map.set(id, { id, name, images: img ? JSON.stringify([{ url: img, width: 640, height: 640 }]) : null });
-    }
-  }
-  res.json(Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name)));
+  const mapped = (data || []).map((a: any) => ({
+    id: artistIdFrom(a.name),
+    name: a.name,
+    spotifyId: a.spotify_id,
+    images: a.images ? JSON.parse(a.images) : null,
+  }));
+  res.json(mapped);
 });
 
 router.get('/:id', async (req, res) => {
+  const sb = getSupabase();
+  if (!sb) return res.status(500).json({ error: 'supabase_not_configured' });
   const name = artistNameFromId(req.params.id);
-  res.json({ id: req.params.id, name });
+  const { data, error } = await sb.from('artists').select('*').eq('name', name).maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Artist not found' });
+  res.json({
+    id: req.params.id,
+    name: data.name,
+    spotifyId: data.spotify_id,
+    images: data.images ? JSON.parse(data.images) : null,
+  });
 });
 
 router.get('/:id/tracks', async (req, res) => {

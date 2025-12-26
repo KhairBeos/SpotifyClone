@@ -45,12 +45,20 @@ router.post('/scan', async (req, res) => {
       let popularity: number | undefined;
       let trackNo = 0;
       let discNo = 0;
+      let finalTitle = title;
+      let finalArtistName = artistName;
+      let finalDurationMs = durationMs;
       if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
         try {
           const q = `track:"${title}" artist:"${artistName}"`;
           const data = await spotifySearch(q, 'track', 1);
           const item = data?.tracks?.items?.[0];
           if (item) {
+            // Use Spotify metadata for title, artist, and duration
+            finalTitle = item.name || title;
+            finalArtistName = item.artists?.[0]?.name || artistName;
+            finalDurationMs = (item as any).duration_ms || durationMs;
+            
             trackSpotifyId = item.id;
             trackSpotifyUri = (item as any).uri;
             previewUrl = (item as any).preview_url || undefined;
@@ -59,9 +67,30 @@ router.post('/scan', async (req, res) => {
             if (item.album?.images) albumImagesJson = JSON.stringify(item.album.images);
             trackNo = (item as any).track_number || 0;
             discNo = (item as any).disc_number || 0;
+            
+            // Save artist info to artists table
             const artistSpotifyId = item.artists?.[0]?.id;
             if (artistSpotifyId) {
-              try { await spotifyGetArtist(artistSpotifyId); } catch {}
+              try {
+                const artistData = await spotifyGetArtist(artistSpotifyId);
+                if (artistData) {
+                  let artistImages: string | undefined;
+                  if ((artistData as any).images && (artistData as any).images.length > 0) {
+                    artistImages = JSON.stringify((artistData as any).images);
+                  }
+                  const { error: artistErr } = await sb.from('artists').upsert(
+                    {
+                      name: finalArtistName,
+                      spotify_id: artistSpotifyId,
+                      images: artistImages,
+                    },
+                    { onConflict: 'name' }
+                  );
+                  if (artistErr) console.error('Failed to upsert artist:', artistErr.message);
+                }
+              } catch (e) {
+                console.error('Failed to get/save artist:', String(e));
+              }
             }
           }
         } catch {}
@@ -85,10 +114,10 @@ router.post('/scan', async (req, res) => {
 
       const row = {
         id,
-        title,
-        artists: [artistName],
+        title: finalTitle,
+        artists: [finalArtistName],
         album: albumName,
-        duration_ms: durationMs,
+        duration_ms: finalDurationMs,
         local_path: relPath,
         cover_local_path: null as any,
         spotify_id: trackSpotifyId,
@@ -104,7 +133,7 @@ router.post('/scan', async (req, res) => {
       const { error: upsertErr } = await sb.from('tracks').upsert(row, { onConflict: 'id' });
       if (upsertErr) throw new Error(upsertErr.message);
       if (exists) updated++; else created++;
-      results.push({ file: relPath, title, artist: artistName, album: albumName });
+      results.push({ file: relPath, title: finalTitle, artist: finalArtistName, album: albumName });
     } catch (e) {
       results.push({ file, error: String(e) });
     }

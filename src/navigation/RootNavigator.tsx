@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
 import LibraryScreen from '../screens/LibraryScreen';
+import ArtistsScreen from '../screens/ArtistsScreen';
 import NowPlayingScreen from '../screens/NowPlayingScreen';
 import AlbumScreen from '../screens/AlbumScreen';
 import PlaylistScreen from '../screens/PlaylistScreen';
@@ -26,13 +27,17 @@ function Tabs() {
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: '#A7A7A7',
         tabBarIcon: ({ color, size }) => {
-          const iconName = route.name === 'Home' ? 'home' : route.name === 'Search' ? 'search' : 'albums';
+          let iconName = 'albums';
+          if (route.name === 'Home') iconName = 'home';
+          else if (route.name === 'Search') iconName = 'search';
+          else if (route.name === 'Artists') iconName = 'people';
           return <Ionicons name={iconName as any} size={size} color={color} />;
         },
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
+      <Tab.Screen name="Artists" component={ArtistsScreen} />
       <Tab.Screen name="Your Library" component={LibraryScreen} options={{ tabBarLabel: 'Library' }} />
     </Tab.Navigator>
   );

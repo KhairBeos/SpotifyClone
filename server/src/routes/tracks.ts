@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import fs from 'fs';
 import path from 'path';
 import mime from 'mime-types';
 import { streamFileWithRange } from '../middleware/rangeStream';
@@ -52,8 +53,36 @@ router.get('/:id/stream', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   if (!data || !data.local_path) return res.status(404).json({ error: 'Not found' });
   const abs = path.isAbsolute(data.local_path) ? data.local_path : path.join(process.env.MEDIA_DIR || path.join(process.cwd(), 'media'), data.local_path);
-  const contentType = mime.lookup(abs) || 'audio/mpeg';
-  streamFileWithRange(req, res, abs, String(contentType));
+  try {
+    if (!fs.existsSync(abs)) return res.status(404).json({ error: 'File not found on disk' });
+    const contentType = mime.lookup(abs) || 'audio/mpeg';
+    streamFileWithRange(req, res, abs, String(contentType));
+  } catch (e) {
+    res.status(500).json({ error: 'stream_failed', detail: String(e) });
+  }
+});
+
+router.patch('/:id', async (req, res) => {
+  const sb = getSupabase();
+  if (!sb) return res.status(500).json({ error: 'supabase_not_configured' });
+  const { id } = req.params;
+  const { title, artists, album, duration_ms } = req.body;
+  const updates: any = {};
+  if (title !== undefined) updates.title = title;
+  if (artists !== undefined) updates.artists = Array.isArray(artists) ? artists : [artists];
+  if (album !== undefined) updates.album = album;
+  if (duration_ms !== undefined) updates.duration_ms = duration_ms;
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
+  const { data, error } = await sb.from('tracks').update(updates).eq('id', id).select('*').maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'Track not found' });
+  res.json({
+    id: data.id,
+    title: data.title,
+    durationMs: data.duration_ms,
+    album: data.album ? { id: data.album, name: data.album } : null,
+    artist: data.artists && data.artists.length ? { id: data.artists[0], name: data.artists[0] } : null,
+  });
 });
 
 export default router;
