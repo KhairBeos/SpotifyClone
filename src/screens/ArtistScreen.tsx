@@ -5,7 +5,7 @@ import { TrackListItem } from '../components/TrackListItem';
 import { BlurView } from 'expo-blur';
 import { useRoute } from '@react-navigation/native';
 import { api, ServerTrack } from '../api/client';
-import { Track } from '../store/player';
+import { Track, usePlayerStore } from '../store/player';
 import Animated, { useAnimatedScrollHandler, useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,6 +15,7 @@ export default function ArtistScreen() {
   const route = useRoute<any>();
   const { id: artistId, name: artistName, images } = route.params || {};
   const insets = useSafeAreaInsets();
+  const { loadQueue, play } = usePlayerStore();
   const [artistImage, setArtistImage] = useState<string | undefined>(undefined);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,12 +45,17 @@ export default function ArtistScreen() {
     api.getArtistTracks(artistId)
       .then((items: ServerTrack[]) => {
         if (!mounted) return;
-        const mapped: Track[] = items.map((t) => ({ id: t.id, title: t.title, artist: artistName || 'Unknown Artist', uri: api.streamUrl(t.id), artwork: pickArtwork(t.album?.images) }));
+        const mapped: Track[] = items.map((t) => ({ id: t.id, title: t.title, artist: artistName || 'Unknown Artist', uri: api.streamUrl(t.id), artwork: pickArtwork(t.album?.images) || api.artworkUrl(t.id) }));
         setTracks(mapped);
       })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, [artistId, artistName]);
+
+  const handlePlayAt = async (idx: number) => {
+    await loadQueue(tracks, idx);
+    await play();
+  };
 
   useEffect(() => {
     function pick(img?: string | Array<{ url: string; width?: number; height?: number }> | null) {
@@ -93,10 +99,12 @@ export default function ArtistScreen() {
       </Animated.View>
       <AnimatedFlatList
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
       data={tracks}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }: { item: Track }) => <TrackListItem track={item} />}
+      renderItem={({ item, index }: { item: Track; index: number }) => (
+        <TrackListItem track={item} customOnPress={() => handlePlayAt(index)} />
+      )}
       ListHeaderComponent={() => (
         <View style={[styles.header, { paddingTop: 16 + (insets.top || 0) }]}> 
           {artistImage ? (

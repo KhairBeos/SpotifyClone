@@ -25,6 +25,11 @@ export type ServerAlbum = {
 };
 
 export const api = {
+  async getTracks(limit = 200): Promise<ServerTrack[]> {
+    const res = await fetch(`${API_URL}/tracks?limit=${limit}&order=title`);
+    if (!res.ok) throw new Error('tracks_failed');
+    return res.json();
+  },
   async getArtists(): Promise<ServerArtist[]> {
     const res = await fetch(`${API_URL}/artists`);
     if (!res.ok) throw new Error('artists_failed');
@@ -67,6 +72,9 @@ export const api = {
   },
   streamUrl(trackId: string) {
     return `${API_URL}/tracks/${trackId}/stream`;
+  },
+  artworkUrl(trackId: string) {
+    return `${API_URL}/tracks/${trackId}/artwork`;
   },
   health: async () => {
     const res = await fetch(`${API_URL}/health`);

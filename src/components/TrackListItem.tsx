@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { colors } from '../theme/colors';
 import { Track, usePlayerStore } from '../store/player';
+import { useLibraryStore } from '../store/library';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { ActionSheet } from './ActionSheet';
@@ -17,6 +18,7 @@ type Props = {
 
 export function TrackListItem({ track, index, onPress, customOnPress, disabled }: Props) {
   const { loadQueue, play } = usePlayerStore();
+  const { toggleFavorite, isFavorite, ensureDefaultPlaylist, addToPlaylist, removeFromPlaylist, getPlaylist } = useLibraryStore();
   const [sheetVisible, setSheetVisible] = useState(false);
   const scale = useSharedValue(1);
 
@@ -28,11 +30,24 @@ export function TrackListItem({ track, index, onPress, customOnPress, disabled }
   };
 
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const liked = isFavorite(track.id);
+  
+  // Check if track is in default playlist
+  const defaultPlaylist = getPlaylist('default-playlist');
+  const isInPlaylist = defaultPlaylist?.tracks.some((t) => t.id === track.id) ?? false;
+  
   const actions = useMemo(() => [
-    { key: 'add', content: <Text style={{ color: colors.text }}>Add to playlist</Text> },
-    { key: 'download', content: <Text style={{ color: colors.text }}>Download</Text> },
+    { key: 'like', content: <Text style={{ color: colors.text }}>{liked ? 'Remove from Liked Songs' : 'Save to Liked Songs'}</Text>, onPress: () => toggleFavorite(track) },
+    { key: 'add', content: <Text style={{ color: colors.text }}>{isInPlaylist ? 'Remove from My Playlist' : 'Add to My Playlist'}</Text>, onPress: async () => {
+      const pid = await ensureDefaultPlaylist();
+      if (isInPlaylist) {
+        await removeFromPlaylist(track.id, pid);
+      } else {
+        await addToPlaylist(track, pid);
+      }
+    } },
     { key: 'share', content: <Text style={{ color: colors.text }}>Share</Text> },
-  ], []);
+  ], [liked, isInPlaylist, track, toggleFavorite, ensureDefaultPlaylist, addToPlaylist, removeFromPlaylist]);
 
   return (
     <>

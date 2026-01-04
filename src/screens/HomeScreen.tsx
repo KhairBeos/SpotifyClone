@@ -21,16 +21,16 @@ export default function HomeScreen() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handlePlayTrack = async (track: ServerTrack) => {
+  const handlePlayTrack = async (track: ServerTrack, startIndex: number) => {
     await Haptics.selectionAsync();
-    const artwork = tryParseArtwork(track.album?.images);
-    await loadQueue([{
-      id: track.id,
-      title: track.title,
-      artist: track.artist?.name || 'Unknown',
-      uri: api.streamUrl(track.id),
-      artwork,
-    }], 0);
+    const queue = (recent || []).map((t) => ({
+      id: t.id,
+      title: t.title,
+      artist: t.artist?.name || 'Unknown Artist',
+      uri: api.streamUrl(t.id),
+      artwork: pickArtworkOrFallback(t),
+    }));
+    await loadQueue(queue, startIndex);
     await play();
   };
 
@@ -40,6 +40,10 @@ export default function HomeScreen() {
       const arr = JSON.parse(imagesJson) as Array<{url:string;width:number;height:number}>;
       return arr?.[1]?.url || arr?.[0]?.url;
     } catch { return undefined; }
+  }
+
+  function pickArtworkOrFallback(t: ServerTrack) {
+    return tryParseArtwork(t.album?.images) || api.artworkUrl(t.id);
   }
 
   return (
@@ -52,7 +56,7 @@ export default function HomeScreen() {
         <FlatList
           data={recent}
           scrollEnabled={false}
-          renderItem={({ item: t }) => {
+          renderItem={({ item: t, index }) => {
             const artwork = tryParseArtwork(t.album?.images);
             return (
               <TrackListItem 
@@ -62,9 +66,9 @@ export default function HomeScreen() {
                   title: t.title, 
                   artist: t.artist?.name || 'Unknown Artist', 
                   uri: api.streamUrl(t.id), 
-                  artwork 
+                  artwork: artwork || api.artworkUrl(t.id),
                 }}
-                customOnPress={() => handlePlayTrack(t)}
+                customOnPress={() => handlePlayTrack(t, index)}
               />
             );
           }}
@@ -110,7 +114,7 @@ const styles = StyleSheet.create({
   content: { 
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   title: { 
     color: colors.text, 

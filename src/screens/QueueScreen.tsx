@@ -1,30 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { colors } from '../theme/colors';
 import { usePlayerStore } from '../store/player';
 import { ActionSheet, ActionItem } from '../components/ActionSheet';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function QueueScreen() {
+  const insets = useSafeAreaInsets();
   const { queue, index, playAt, removeAt, enqueueNext } = usePlayerStore();
   const [sheet, setSheet] = useState<{ visible: boolean; row: number | null }>({ visible: false, row: null });
 
   return (
     <>
       <FlatList
-        style={styles.container}
-        contentContainerStyle={styles.content}
+        style={[styles.container, { paddingTop: insets.top }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
         data={queue}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={<Text style={styles.header}>Queue</Text>}
         renderItem={({ item, index: i }) => (
           <TouchableOpacity style={[styles.row, i === index && styles.active]} onPress={() => playAt(i)} onLongPress={() => { Haptics.selectionAsync(); setSheet({ visible: true, row: i }); }}>
-            <View style={styles.thumb} />
+            {item.artwork ? (
+              <Image source={{ uri: item.artwork }} style={styles.thumb} />
+            ) : (
+              <View style={styles.thumb} />
+            )}
             <View style={{ flex: 1 }}>
               <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
               <Text style={styles.sub} numberOfLines={1}>{item.artist}</Text>
             </View>
-            {i === index && <Text style={styles.now}>Now</Text>}
+            {i === index && <Text style={styles.now}>Now Playing</Text>}
           </TouchableOpacity>
         )}
         ListEmptyComponent={<Text style={styles.empty}>Queue is empty</Text>}
@@ -50,6 +56,6 @@ const styles = StyleSheet.create({
   thumb: { width: 48, height: 48, backgroundColor: colors.surface, borderRadius: 4, marginRight: 12 },
   title: { color: colors.text, fontWeight: '600' },
   sub: { color: '#A7A7A7', marginTop: 2, fontSize: 12 },
-  now: { color: colors.primary, marginLeft: 8 },
+  now: { color: colors.primary, marginLeft: 8, fontWeight: '700' },
   empty: { color: '#A7A7A7', textAlign: 'center', marginTop: 40 },
 });

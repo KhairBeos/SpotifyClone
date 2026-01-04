@@ -38,7 +38,7 @@ export default function ArtistsScreen() {
       <FlatList
         data={artists}
         keyExtractor={(i) => i.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.row} onPress={() => nav.navigate('Artist', { id: item.id, name: item.name, images: item.images })}>
             <Image source={{ uri: pickImage(item.images) }} style={styles.avatar} />

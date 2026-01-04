@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePlayerStore } from '../store/player';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { useLibraryStore } from '../store/library';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -22,12 +23,17 @@ export default function NowPlayingScreen() {
   const { currentTrack, positionMillis, durationMillis, togglePlay, next, prev, isPlaying, seek, shuffle, repeatMode, toggleShuffle, cycleRepeatMode, queue, index } = usePlayerStore();
   const nav = useNavigation();
   const [seeking, setSeeking] = useState<number | null>(null);
+  const { isFavorite, toggleFavorite, hydrate } = useLibraryStore();
+
+  React.useEffect(() => { hydrate(); }, [hydrate]);
 
   const progress = useMemo(() => {
     const pos = seeking ?? positionMillis;
     if (!durationMillis || durationMillis <= 0) return 0;
     return Math.min(1, Math.max(0, pos / durationMillis));
   }, [positionMillis, durationMillis, seeking]);
+
+  const liked = currentTrack ? isFavorite(currentTrack.id) : false;
 
   const hasPrev = (index || 0) > 0;
   const hasNext = queue && index < queue.length - 1;
@@ -66,11 +72,13 @@ export default function NowPlayingScreen() {
           <Ionicons name="chevron-down" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Now Playing</Text>
-        <Ionicons name="heart-outline" size={24} color={colors.text} />
+        <TouchableOpacity disabled={!currentTrack} onPress={() => { if (currentTrack) toggleFavorite(currentTrack); }}>
+          <Ionicons name={liked ? 'heart' : 'heart-outline'} size={24} color={liked ? colors.primary : colors.text} />
+        </TouchableOpacity>
       </View>
 
       {/* Main Content */}
-      <ScrollView contentContainerStyle={styles.scrollContent} scrollEnabled={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]} scrollEnabled={false}>
         {/* Album Artwork */}
         <View style={styles.artworkWrapper}>
           <View style={styles.artworkShadow}>
@@ -88,8 +96,8 @@ export default function NowPlayingScreen() {
             <Text style={styles.title} numberOfLines={2}>{currentTrack.title}</Text>
             <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist}</Text>
           </View>
-          <TouchableOpacity onPress={() => Haptics.selectionAsync()}>
-            <Ionicons name="heart-outline" size={24} color={colors.text} />
+          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); toggleFavorite(currentTrack); }}>
+            <Ionicons name={liked ? 'heart' : 'heart-outline'} size={24} color={liked ? colors.primary : colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -306,8 +314,8 @@ const styles = StyleSheet.create({
   footerActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 16,
-    paddingTop: 24,
+    paddingVertical: 18,
+    paddingTop: 22,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },

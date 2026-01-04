@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import * as Haptics from 'expo-haptics';
@@ -10,10 +10,11 @@ import { usePlayerStore } from '../store/player';
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<ServerTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const { loadQueue, play } = usePlayerStore();
   const debounceTimer = useRef<NodeJS.Timeout>();
+  const allTracksRef = useRef<ServerTrack[] | null>(null);
 
   // Real-time search with debounce
   useEffect(() => {
@@ -27,15 +28,21 @@ export default function SearchScreen() {
     setLoading(true);
     debounceTimer.current = setTimeout(async () => {
       try {
-        const data = await api.search(query.trim());
-        const items = (data?.tracks?.items || []).slice(0, 15);
-        setSuggestions(items);
+        if (!allTracksRef.current) {
+          const data = await api.getTracks(200);
+          allTracksRef.current = data;
+        }
+        const lower = query.trim().toLowerCase();
+        const filtered = (allTracksRef.current || []).filter((t) =>
+          (t.title || '').toLowerCase().includes(lower) || (t.artist?.name || '').toLowerCase().includes(lower)
+        );
+        setSuggestions(filtered.slice(0, 100));
       } catch (err) {
         setSuggestions([]);
       } finally {
         setLoading(false);
       }
-    }, 300); // Debounce 300ms
+    }, 250); // Debounce 250ms
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -45,22 +52,18 @@ export default function SearchScreen() {
   function pickArtwork(imagesJson?: string | null): string | undefined {
     if (!imagesJson) return undefined;
     try {
-      const arr = JSON.parse(imagesJson) as Array<{ url: string; width: number; height: number }>;
+      const arr = JSON.parse(imagesJson) as Array<{ url: string; width?: number; height?: number }>;
       if (!Array.isArray(arr) || arr.length === 0) return undefined;
-      return arr?.[1]?.url || arr?.[0]?.url;
+      return arr?.[0]?.url || arr?.[1]?.url;
     } catch { return undefined; }
   }
 
-  async function onTrackPress(t: any) {
+  async function onTrackPress(t: ServerTrack) {
     await Haptics.selectionAsync();
-    if (t.preview_url) {
-      const primaryArtist = t.artists?.[0]?.name || 'Unknown';
-      const spotifyArtwork = t.album?.images?.[0]?.url as string | undefined;
-      await loadQueue([{ id: t.id, title: t.name, artist: primaryArtist, uri: t.preview_url, artwork: spotifyArtwork }], 0);
-      await play();
-    } else {
-      Alert.alert('Not Playable', 'No preview available for this track.');
-    }
+    const artistName = t.artist?.name || 'Unknown';
+    const artwork = pickArtwork(t.album?.images) || api.artworkUrl(t.id);
+    await loadQueue([{ id: t.id, title: t.title, artist: artistName, uri: api.streamUrl(t.id), artwork }], 0);
+    await play();
   }
 
   const hasSuggestions = query.trim().length > 0 && suggestions.length > 0;
@@ -92,16 +95,16 @@ export default function SearchScreen() {
       <FlatList
         data={hasSuggestions ? suggestions : []}
         keyExtractor={(item) => item.id}
-        scrollEnabled={false}
+        scrollEnabled
+        contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
         renderItem={({ item: t }) => {
-          const primaryArtist = t.artists?.[0]?.name || 'Unknown';
-          const spotifyArtwork = t.album?.images?.[0]?.url as string | undefined;
+          const artistName = t.artist?.name || 'Unknown';
+          const artwork = pickArtwork(t.album?.images) || api.artworkUrl(t.id);
           return (
             <TrackListItem
               key={t.id}
-              track={{ id: t.id, title: t.name, artist: primaryArtist, uri: t.preview_url || '', artwork: spotifyArtwork }}
+              track={{ id: t.id, title: t.title, artist: artistName, uri: api.streamUrl(t.id), artwork }}
               customOnPress={() => onTrackPress(t)}
-              disabled={!t.preview_url}
             />
           );
         }}
@@ -123,7 +126,7 @@ export default function SearchScreen() {
 
       {/* Default State: Browse All */}
       {!hasSuggestions && !loading && query.trim().length === 0 && (
-        <ScrollView contentContainerStyle={styles.browseContent}>
+        <ScrollView contentContainerStyle={[styles.browseContent, { paddingBottom: 160 + insets.bottom }]}>
           <Text style={styles.sectionTitle}>Browse All</Text>
           <View style={styles.browseGrid}>
             {[

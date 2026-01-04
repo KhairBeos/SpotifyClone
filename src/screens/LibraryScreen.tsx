@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useNavigation } from '@react-navigation/native';
 import { api, ServerArtist, ServerAlbum } from '../api/client';
+import { useLibraryStore } from '../store/library';
 import * as Haptics from 'expo-haptics';
 
 export default function LibraryScreen() {
@@ -12,6 +13,10 @@ export default function LibraryScreen() {
   const [artists, setArtists] = useState<ServerArtist[] | null>(null);
   const [albums, setAlbums] = useState<ServerAlbum[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [artistFallbackArt, setArtistFallbackArt] = useState<Record<string, string>>({});
+  const { favorites, playlists, hydrate, ensureDefaultPlaylist } = useLibraryStore();
+
+  useEffect(() => { hydrate(); }, [hydrate]);
 
   useEffect(() => {
     let mounted = true;
@@ -23,13 +28,48 @@ export default function LibraryScreen() {
     return () => { mounted = false; };
   }, []);
 
-  function parseArtwork(imagesJson?: string | null): string | undefined {
+  function parseArtwork(imagesJson?: string | Array<{ url: string }> | null): string | undefined {
     if (!imagesJson) return undefined;
     try {
-      const arr = JSON.parse(imagesJson) as Array<{url:string}>;
+      const arr = Array.isArray(imagesJson) ? imagesJson : JSON.parse(imagesJson) as Array<{url:string}>;
       return arr?.[1]?.url || arr?.[0]?.url;
     } catch { return undefined; }
   }
+
+  useEffect(() => {
+    if (!artists || artists.length === 0) return;
+    let cancelled = false;
+    const targets = artists.slice(0, 6).filter((a) => !parseArtwork(a.images));
+    if (targets.length === 0) return;
+
+    (async () => {
+      const results = await Promise.all(targets.map(async (a) => {
+        try {
+          // Prefer artist images from detail endpoint (will include Spotify images if available)
+          const detail = await api.getArtist(a.id);
+          const artFromDetail = parseArtwork(detail.images as any);
+          if (artFromDetail) return { id: a.id, art: artFromDetail };
+
+          // Secondary fallback: use first track's cover if artist images truly missing
+          const tracks = await api.getArtistTracks(a.id);
+          const first = tracks?.[0];
+          if (!first) return { id: a.id, art: undefined };
+          const parsed = parseArtwork(first.album?.images);
+          return { id: a.id, art: parsed || api.artworkUrl(first.id) };
+        } catch {
+          return { id: a.id, art: undefined };
+        }
+      }));
+      if (cancelled) return;
+      const updates: Record<string, string> = {};
+      results.forEach(({ id, art }) => { if (art) updates[id] = art; });
+      if (Object.keys(updates).length) {
+        setArtistFallbackArt((prev) => ({ ...prev, ...updates }));
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [artists]);
 
   const handleArtistPress = (artist: ServerArtist) => {
     Haptics.selectionAsync();
@@ -39,6 +79,17 @@ export default function LibraryScreen() {
   const handleAlbumPress = (album: ServerAlbum) => {
     Haptics.selectionAsync();
     nav.navigate('Album' as never, { id: album.id } as never);
+  };
+
+  const handleFavoritesPress = () => {
+    Haptics.selectionAsync();
+    nav.navigate('Playlist' as never, { id: 'liked', type: 'favorites', name: 'Liked Songs' } as never);
+  };
+
+  const handleMyPlaylistPress = async () => {
+    Haptics.selectionAsync();
+    const pid = await ensureDefaultPlaylist();
+    nav.navigate('Playlist' as never, { id: pid, type: 'playlist', name: 'My Playlist' } as never);
   };
 
   return (
@@ -57,7 +108,7 @@ export default function LibraryScreen() {
               <Text style={styles.sectionTitle}>Artists</Text>
               <View style={styles.artistsGrid}>
                 {artists.slice(0, 6).map((a) => {
-                  const art = parseArtwork(a.images);
+                  const art = parseArtwork(a.images) || artistFallbackArt[a.id];
                   const initial = a.name?.[0]?.toUpperCase() || '';
                   return (
                     <TouchableOpacity 
@@ -106,6 +157,25 @@ export default function LibraryScreen() {
             </>
           )}
 
+          {/* Playlists Section */}
+          <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Playlists</Text>
+          <View style={styles.playlistsRow}>
+            <TouchableOpacity style={styles.playlistCard} onPress={handleFavoritesPress} activeOpacity={0.8}>
+              <View style={[styles.playlistThumb, { backgroundColor: '#1DB954' }]}>
+                <Text style={styles.playlistEmoji}>❤</Text>
+              </View>
+              <Text style={styles.playlistName}>Liked Songs</Text>
+              <Text style={styles.cardLabel}>{Object.keys(favorites).length} tracks</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.playlistCard} onPress={handleMyPlaylistPress} activeOpacity={0.8}>
+              <View style={[styles.playlistThumb, { backgroundColor: '#4ECDC4' }]}>
+                <Text style={styles.playlistEmoji}>🎵</Text>
+              </View>
+              <Text style={styles.playlistName}>My Playlist</Text>
+              <Text style={styles.cardLabel}>{(playlists.find(p => p.id === 'default-playlist')?.tracks.length) || 0} tracks</Text>
+            </TouchableOpacity>
+          </View>
+
           {!loading && (!artists || artists.length === 0) && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No artists yet</Text>
@@ -137,7 +207,7 @@ const styles = StyleSheet.create({
   content: { 
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   sectionTitle: {
     color: colors.text,
@@ -227,5 +297,32 @@ const styles = StyleSheet.create({
     color: '#A7A7A7',
     fontSize: 12,
     marginTop: 4,
+  },
+  playlistsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  playlistCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 12,
+  },
+  playlistThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  playlistEmoji: {
+    fontSize: 20,
+    color: colors.text,
+  },
+  playlistName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
