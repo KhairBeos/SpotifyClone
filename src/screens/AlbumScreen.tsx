@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Animated, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Animated, Image, FlatListProps } from 'react-native';
 import { colors } from '../theme/colors';
 import { TrackListItem } from '../components/TrackListItem';
 import { BlurView } from 'expo-blur';
@@ -33,18 +33,22 @@ export default function AlbumScreen() {
 
   const albumTitle = album?.name || 'Album';
 
+  const AnimatedFlatList = useMemo(() => {
+    return Animated.createAnimatedComponent(FlatList) as React.ComponentType<FlatListProps<Track>>;
+  }, []);
+
   return (
     <View style={{ flex: 1 }}>
       <Animated.View style={[styles.topBar, { opacity }]}> 
         <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
         <Text style={styles.topTitle}>{albumTitle}</Text>
       </Animated.View>
-      <FlatList
+      <AnimatedFlatList
       style={styles.container}
       contentContainerStyle={styles.content}
       data={tracks}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <TrackListItem track={item as any} />}
+      renderItem={({ item }: { item: Track }) => <TrackListItem track={item} />}
       ListHeaderComponent={() => (
         <View style={styles.header}>
           {album?.images ? (

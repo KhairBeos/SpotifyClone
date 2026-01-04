@@ -1,0 +1,8 @@
+{
+  "java.project.exclude": ["**/node_modules/**"],
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java"
+  },
+  "postman.settings.dotenv-detection-notification-visibility": false,
+  "java.configuration.updateBuildConfiguration": "disabled"
+}
