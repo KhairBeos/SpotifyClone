@@ -58,7 +58,7 @@ router.post('/scan', async (req, res) => {
             finalTitle = item.name || title;
             finalArtistName = item.artists?.[0]?.name || artistName;
             finalDurationMs = (item as any).duration_ms || durationMs;
-            
+
             trackSpotifyId = item.id;
             trackSpotifyUri = (item as any).uri;
             previewUrl = (item as any).preview_url || undefined;
@@ -67,7 +67,7 @@ router.post('/scan', async (req, res) => {
             if (item.album?.images) albumImagesJson = JSON.stringify(item.album.images);
             trackNo = (item as any).track_number || 0;
             discNo = (item as any).disc_number || 0;
-            
+
             // Save artist info to artists table
             const artistSpotifyId = item.artists?.[0]?.id;
             if (artistSpotifyId) {
@@ -132,7 +132,8 @@ router.post('/scan', async (req, res) => {
 
       const { error: upsertErr } = await sb.from('tracks').upsert(row, { onConflict: 'id' });
       if (upsertErr) throw new Error(upsertErr.message);
-      if (exists) updated++; else created++;
+      if (exists) updated++;
+      else created++;
       results.push({ file: relPath, title: finalTitle, artist: finalArtistName, album: albumName });
     } catch (e) {
       results.push({ file, error: String(e) });

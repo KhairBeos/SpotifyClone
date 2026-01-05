@@ -10,21 +10,23 @@ router.get('/', async (_req, res) => {
   if (!sb) return res.status(500).json({ error: 'supabase_not_configured' });
   const { data, error } = await sb.from('artists').select('*').order('name', { ascending: true });
   if (error) return res.status(500).json({ error: error.message });
-  const mapped = await Promise.all((data || []).map(async (a: any) => {
-    let images = a.images ? JSON.parse(a.images) : null;
-    if ((!images || images.length === 0) && a.spotify_id) {
-      try {
-        const sp = await spotifyGetArtist(a.spotify_id);
-        images = sp?.images || null;
-      } catch {}
-    }
-    return {
-      id: artistIdFrom(a.name),
-      name: a.name,
-      spotifyId: a.spotify_id,
-      images,
-    };
-  }));
+  const mapped = await Promise.all(
+    (data || []).map(async (a: any) => {
+      let images = a.images ? JSON.parse(a.images) : null;
+      if ((!images || images.length === 0) && a.spotify_id) {
+        try {
+          const sp = await spotifyGetArtist(a.spotify_id);
+          images = sp?.images || null;
+        } catch {}
+      }
+      return {
+        id: artistIdFrom(a.name),
+        name: a.name,
+        spotifyId: a.spotify_id,
+        images,
+      };
+    })
+  );
   res.json(mapped);
 });
 
@@ -62,12 +64,22 @@ router.get('/:id/tracks', async (req, res) => {
     .order('track_number', { ascending: true })
     .order('title', { ascending: true });
   if (error) return res.status(500).json({ error: error.message });
-  res.json((data || []).map((t: any) => ({
-    id: t.id,
-    title: t.title,
-    durationMs: t.duration_ms,
-    album: t.album ? { id: t.album, name: t.album, images: t.spotify_image_url ? JSON.stringify([{ url: t.spotify_image_url, width: 640, height: 640 }]) : null } : null,
-  })));
+  res.json(
+    (data || []).map((t: any) => ({
+      id: t.id,
+      title: t.title,
+      durationMs: t.duration_ms,
+      album: t.album
+        ? {
+            id: t.album,
+            name: t.album,
+            images: t.spotify_image_url
+              ? JSON.stringify([{ url: t.spotify_image_url, width: 640, height: 640 }])
+              : null,
+          }
+        : null,
+    }))
+  );
 });
 
 export default router;

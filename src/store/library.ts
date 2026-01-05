@@ -91,7 +91,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   removeFromPlaylist: async (trackId: string, playlistId: string) => {
     const { playlists } = get();
-    const updated = playlists.map((p) => p.id === playlistId ? { ...p, tracks: p.tracks.filter((t) => t.id !== trackId) } : p);
+    const updated = playlists.map((p) =>
+      p.id === playlistId ? { ...p, tracks: p.tracks.filter((t) => t.id !== trackId) } : p
+    );
     set({ playlists: updated });
     await save({ favorites: get().favorites, playlists: updated });
   },

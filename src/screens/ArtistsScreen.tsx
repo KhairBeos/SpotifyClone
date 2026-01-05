@@ -14,11 +14,18 @@ export default function ArtistsScreen() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    api.getArtists()
-      .then((list) => { if (mounted) setArtists(list); })
+    api
+      .getArtists()
+      .then((list) => {
+        if (mounted) setArtists(list);
+      })
       .catch(() => {})
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   function pickImage(images?: any) {
@@ -27,7 +34,9 @@ export default function ArtistsScreen() {
       if (typeof images === 'string') images = JSON.parse(images);
       if (!Array.isArray(images) || images.length === 0) return undefined;
       return images[1]?.url || images[0]?.url;
-    } catch { return undefined; }
+    } catch {
+      return undefined;
+    }
   }
 
   return (
@@ -40,14 +49,21 @@ export default function ArtistsScreen() {
         keyExtractor={(i) => i.id}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.row} onPress={() => nav.navigate('Artist', { id: item.id, name: item.name, images: item.images })}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => nav.navigate('Artist', { id: item.id, name: item.name, images: item.images })}
+          >
             <Image source={{ uri: pickImage(item.images) }} style={styles.avatar} />
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{item.name}</Text>
             </View>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={() => <View style={{ padding: 20 }}><Text style={{ color: '#A7A7A7' }}>{loading ? 'Loading…' : 'No artists'}</Text></View>}
+        ListEmptyComponent={() => (
+          <View style={{ padding: 20 }}>
+            <Text style={{ color: '#A7A7A7' }}>{loading ? 'Loading…' : 'No artists'}</Text>
+          </View>
+        )}
       />
     </View>
   );

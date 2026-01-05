@@ -23,7 +23,9 @@ const DarkTheme: Theme = {
 
 export default function App() {
   const init = usePlayerStore((s) => s.init);
-  useEffect(() => { init(); }, []);
+  useEffect(() => {
+    init();
+  }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

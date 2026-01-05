@@ -20,15 +20,26 @@ export default function QueueScreen() {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={<Text style={styles.header}>Queue</Text>}
         renderItem={({ item, index: i }) => (
-          <TouchableOpacity style={[styles.row, i === index && styles.active]} onPress={() => playAt(i)} onLongPress={() => { Haptics.selectionAsync(); setSheet({ visible: true, row: i }); }}>
+          <TouchableOpacity
+            style={[styles.row, i === index && styles.active]}
+            onPress={() => playAt(i)}
+            onLongPress={() => {
+              Haptics.selectionAsync();
+              setSheet({ visible: true, row: i });
+            }}
+          >
             {item.artwork ? (
               <Image source={{ uri: item.artwork }} style={styles.thumb} />
             ) : (
               <View style={styles.thumb} />
             )}
             <View style={{ flex: 1 }}>
-              <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-              <Text style={styles.sub} numberOfLines={1}>{item.artist}</Text>
+              <Text style={styles.title} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={styles.sub} numberOfLines={1}>
+                {item.artist}
+              </Text>
             </View>
             {i === index && <Text style={styles.now}>Now Playing</Text>}
           </TouchableOpacity>
@@ -38,10 +49,26 @@ export default function QueueScreen() {
       <ActionSheet
         visible={sheet.visible}
         onClose={() => setSheet({ visible: false, row: null })}
-        actions={([
-          { key: 'playnext', content: <Text style={{ color: colors.text }}>Play next</Text>, onPress: () => { const i = sheet.row ?? -1; if (i >= 0) enqueueNext(queue[i]); } },
-          { key: 'remove', content: <Text style={{ color: colors.text }}>Remove from queue</Text>, onPress: () => { const i = sheet.row ?? -1; if (i >= 0) removeAt(i); } },
-        ]) as ActionItem[]}
+        actions={
+          [
+            {
+              key: 'playnext',
+              content: <Text style={{ color: colors.text }}>Play next</Text>,
+              onPress: () => {
+                const i = sheet.row ?? -1;
+                if (i >= 0) enqueueNext(queue[i]);
+              },
+            },
+            {
+              key: 'remove',
+              content: <Text style={{ color: colors.text }}>Remove from queue</Text>,
+              onPress: () => {
+                const i = sheet.row ?? -1;
+                if (i >= 0) removeAt(i);
+              },
+            },
+          ] as ActionItem[]
+        }
       />
     </>
   );

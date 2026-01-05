@@ -1,5 +1,3 @@
-import crypto from 'crypto';
-
 export function artistIdFrom(name: string) {
   return 'art_' + Buffer.from(name, 'utf8').toString('base64url');
 }

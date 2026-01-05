@@ -33,8 +33,8 @@ export default function SearchScreen() {
           allTracksRef.current = data;
         }
         const lower = query.trim().toLowerCase();
-        const filtered = (allTracksRef.current || []).filter((t) =>
-          (t.title || '').toLowerCase().includes(lower) || (t.artist?.name || '').toLowerCase().includes(lower)
+        const filtered = (allTracksRef.current || []).filter(
+          (t) => (t.title || '').toLowerCase().includes(lower) || (t.artist?.name || '').toLowerCase().includes(lower)
         );
         setSuggestions(filtered.slice(0, 100));
       } catch (err) {
@@ -55,7 +55,9 @@ export default function SearchScreen() {
       const arr = JSON.parse(imagesJson) as Array<{ url: string; width?: number; height?: number }>;
       if (!Array.isArray(arr) || arr.length === 0) return undefined;
       return arr?.[0]?.url || arr?.[1]?.url;
-    } catch { return undefined; }
+    } catch {
+      return undefined;
+    }
   }
 
   async function onTrackPress(t: ServerTrack) {
@@ -84,7 +86,12 @@ export default function SearchScreen() {
             style={styles.input}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => { setQuery(''); setSuggestions([]); }}>
+            <TouchableOpacity
+              onPress={() => {
+                setQuery('');
+                setSuggestions([]);
+              }}
+            >
               <Text style={styles.clearBtn}>✕</Text>
             </TouchableOpacity>
           )}
@@ -149,22 +156,22 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: colors.background,
   },
-  header: { 
-    paddingHorizontal: 16, 
+  header: {
+    paddingHorizontal: 16,
     paddingVertical: 12,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  title: { 
-    color: colors.text, 
-    fontSize: 28, 
-    fontWeight: '700', 
-    marginBottom: 12 
+  title: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 12,
   },
   searchBox: {
     flexDirection: 'row',

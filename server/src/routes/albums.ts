@@ -9,7 +9,10 @@ router.get('/', async (_req, res) => {
   if (!sb) return res.status(500).json({ error: 'supabase_not_configured' });
   const { data, error } = await sb.from('tracks').select('album, artists, spotify_image_url');
   if (error) return res.status(500).json({ error: error.message });
-  const map = new Map<string, { id: string; name: string; artist?: { id: string; name: string } | null; images?: string | null }>();
+  const map = new Map<
+    string,
+    { id: string; name: string; artist?: { id: string; name: string } | null; images?: string | null }
+  >();
   for (const t of data || []) {
     const album = (t as any).album as string | null;
     const artists = (t as any).artists as string[] | null;

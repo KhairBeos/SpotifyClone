@@ -21,7 +21,12 @@ app.get('/health', async (_req, res) => {
   if (!sb) return res.json({ ok: true, mediaDir: MEDIA_DIR, supabase: { configured: false, ok: false } });
   try {
     const { error } = await sb.from('tracks').select('id').limit(1);
-    if (error) return res.json({ ok: true, mediaDir: MEDIA_DIR, supabase: { configured: true, ok: false, error: error.message } });
+    if (error)
+      return res.json({
+        ok: true,
+        mediaDir: MEDIA_DIR,
+        supabase: { configured: true, ok: false, error: error.message },
+      });
     res.json({ ok: true, mediaDir: MEDIA_DIR, supabase: { configured: true, ok: true } });
   } catch (e: any) {
     res.json({ ok: true, mediaDir: MEDIA_DIR, supabase: { configured: true, ok: false, error: String(e) } });

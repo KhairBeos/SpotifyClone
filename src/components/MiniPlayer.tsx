@@ -13,19 +13,23 @@ export function MiniPlayer() {
   const { currentTrack, isPlaying, togglePlay, positionMillis, durationMillis, next } = usePlayerStore();
   const translateY = useSharedValue(0);
   const routeName = useNavigationState((state) => state?.routes?.[state.index]?.name) || '';
-  
-  const pan = React.useMemo(() => Gesture.Pan()
-    .onUpdate((e) => {
-      const y = Math.min(0, Math.max(-80, e.translationY));
-      translateY.value = y;
-    })
-    .onEnd((e) => {
-      const shouldOpen = e.translationY < -40;
-      if (shouldOpen) {
-        runOnJS(navigation.navigate)('NowPlaying' as never);
-      }
-      translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
-    }), [navigation, translateY]);
+
+  const pan = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .onUpdate((e) => {
+          const y = Math.min(0, Math.max(-80, e.translationY));
+          translateY.value = y;
+        })
+        .onEnd((e) => {
+          const shouldOpen = e.translationY < -40;
+          if (shouldOpen) {
+            runOnJS(navigation.navigate)('NowPlaying' as never);
+          }
+          translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
+        }),
+    [navigation, translateY]
+  );
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -49,14 +53,30 @@ export function MiniPlayer() {
             <View style={[styles.thumb, { backgroundColor: colors.surface }]} />
           )}
           <View style={styles.info}>
-            <Text style={styles.title} numberOfLines={1}>{currentTrack.title}</Text>
-            <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist}</Text>
+            <Text style={styles.title} numberOfLines={1}>
+              {currentTrack.title}
+            </Text>
+            <Text style={styles.artist} numberOfLines={1}>
+              {currentTrack.artist}
+            </Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); togglePlay(); }} style={styles.button}>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            togglePlay();
+          }}
+          style={styles.button}
+        >
           <Ionicons name={isPlaying ? 'pause' : 'play'} size={22} color={colors.text} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); next(); }} style={styles.button}>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync();
+            next();
+          }}
+          style={styles.button}
+        >
           <Ionicons name="play-skip-forward" size={22} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.progressBarBg}>

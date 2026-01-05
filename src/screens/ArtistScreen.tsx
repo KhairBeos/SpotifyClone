@@ -34,22 +34,35 @@ export default function ArtistScreen() {
       const arr = JSON.parse(imagesJson) as Array<{ url: string; width: number; height: number }>;
       if (!Array.isArray(arr) || arr.length === 0) return undefined;
       // pick medium or first
-      return (arr.sort((a,b)=> (a.width||0)-(b.width||0))[Math.min(1, arr.length-1)]?.url) || arr[0].url;
-    } catch { return undefined; }
+      return arr.sort((a, b) => (a.width || 0) - (b.width || 0))[Math.min(1, arr.length - 1)]?.url || arr[0].url;
+    } catch {
+      return undefined;
+    }
   }
 
   useEffect(() => {
     let mounted = true;
     if (!artistId) return;
     setLoading(true);
-    api.getArtistTracks(artistId)
+    api
+      .getArtistTracks(artistId)
       .then((items: ServerTrack[]) => {
         if (!mounted) return;
-        const mapped: Track[] = items.map((t) => ({ id: t.id, title: t.title, artist: artistName || 'Unknown Artist', uri: api.streamUrl(t.id), artwork: pickArtwork(t.album?.images) || api.artworkUrl(t.id) }));
+        const mapped: Track[] = items.map((t) => ({
+          id: t.id,
+          title: t.title,
+          artist: artistName || 'Unknown Artist',
+          uri: api.streamUrl(t.id),
+          artwork: pickArtwork(t.album?.images) || api.artworkUrl(t.id),
+        }));
         setTracks(mapped);
       })
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, [artistId, artistName]);
 
   const handlePlayAt = async (idx: number) => {
@@ -62,7 +75,11 @@ export default function ArtistScreen() {
       if (!img) return undefined;
       let arr: Array<{ url: string; width?: number; height?: number }> | undefined;
       if (typeof img === 'string') {
-        try { arr = JSON.parse(img); } catch { return undefined; }
+        try {
+          arr = JSON.parse(img);
+        } catch {
+          return undefined;
+        }
       } else if (Array.isArray(img)) {
         arr = img;
       }
@@ -80,7 +97,8 @@ export default function ArtistScreen() {
 
     let cancelled = false;
     if (artistId) {
-      api.getArtist(artistId)
+      api
+        .getArtist(artistId)
         .then((a) => {
           if (cancelled) return;
           const picked = pick(a.images as any);
@@ -88,39 +106,41 @@ export default function ArtistScreen() {
         })
         .catch(() => {});
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [artistId, images]);
 
   return (
     <View style={{ flex: 1 }}>
-      <Animated.View style={[styles.topBar, opacityStyle]}> 
+      <Animated.View style={[styles.topBar, opacityStyle]}>
         <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
         <Text style={styles.topTitle}>{artistName || 'Artist'}</Text>
       </Animated.View>
       <AnimatedFlatList
-      style={styles.container}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
-      data={tracks}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item, index }: { item: Track; index: number }) => (
-        <TrackListItem track={item} customOnPress={() => handlePlayAt(index)} />
-      )}
-      ListHeaderComponent={() => (
-        <View style={[styles.header, { paddingTop: 16 + (insets.top || 0) }]}> 
-          {artistImage ? (
-            <Image source={{ uri: artistImage }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>{artistName?.[0]?.toUpperCase() || 'A'}</Text>
-            </View>
-          )}
-          <Text style={styles.title}>{artistName || 'Artist'}</Text>
-          <Text style={styles.sub}>{loading ? 'Loading tracks…' : `${tracks.length} tracks`}</Text>
-        </View>
-      )}
-      onScroll={scrollHandler}
-      scrollEventThrottle={16}
-    />
+        style={styles.container}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
+        data={tracks}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item, index }: { item: Track; index: number }) => (
+          <TrackListItem track={item} customOnPress={() => handlePlayAt(index)} />
+        )}
+        ListHeaderComponent={() => (
+          <View style={[styles.header, { paddingTop: 16 + (insets.top || 0) }]}>
+            {artistImage ? (
+              <Image source={{ uri: artistImage }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>{artistName?.[0]?.toUpperCase() || 'A'}</Text>
+              </View>
+            )}
+            <Text style={styles.title}>{artistName || 'Artist'}</Text>
+            <Text style={styles.sub}>{loading ? 'Loading tracks…' : `${tracks.length} tracks`}</Text>
+          </View>
+        )}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+      />
     </View>
   );
 }
@@ -129,10 +149,28 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 16, paddingBottom: 16 },
   header: { alignItems: 'center', paddingTop: 16, paddingBottom: 12 },
-  topBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 56, justifyContent: 'flex-end', paddingHorizontal: 16, paddingBottom: 8, zIndex: 10 },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 56,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    zIndex: 10,
+  },
   topTitle: { color: colors.text, fontWeight: '800' },
   avatar: { width: 160, height: 160, borderRadius: 80, backgroundColor: colors.surface, marginBottom: 12 },
-  avatarPlaceholder: { width: 160, height: 160, borderRadius: 80, backgroundColor: '#1f1f1f', marginBottom: 12, alignItems: 'center', justifyContent: 'center' },
+  avatarPlaceholder: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: '#1f1f1f',
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarInitial: { color: colors.text, fontSize: 48, fontWeight: '800' },
   title: { color: colors.text, fontSize: 22, fontWeight: '800' },
   sub: { color: '#A7A7A7', marginTop: 4 },

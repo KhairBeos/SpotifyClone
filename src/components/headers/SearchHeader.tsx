@@ -18,6 +18,13 @@ export function SearchHeader() {
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, backgroundColor: colors.background },
   title: { color: colors.text, fontSize: 28, fontWeight: '800', marginBottom: 12 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1F1F1F', borderRadius: 8, paddingHorizontal: 12, height: 42 },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1F1F1F',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 42,
+  },
   placeholder: { color: '#A7A7A7', marginLeft: 8 },
 });

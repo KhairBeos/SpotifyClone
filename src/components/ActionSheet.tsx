@@ -30,13 +30,19 @@ export function ActionSheet({ visible, onClose, actions }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Animated.View style={[styles.backdrop, dimStyle]}> 
+      <Animated.View style={[styles.backdrop, dimStyle]}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={StyleSheet.absoluteFill} />
         </TouchableWithoutFeedback>
         <Animated.View style={[styles.sheet, sheetStyle]}>
           {actions.map((a) => (
-            <TouchableWithoutFeedback key={a.key} onPress={() => { a.onPress?.(); onClose(); }}>
+            <TouchableWithoutFeedback
+              key={a.key}
+              onPress={() => {
+                a.onPress?.();
+                onClose();
+              }}
+            >
               <View style={styles.row}>{a.content}</View>
             </TouchableWithoutFeedback>
           ))}
@@ -49,5 +55,10 @@ export function ActionSheet({ visible, onClose, actions }: Props) {
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: colors.surface, paddingBottom: 24, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  row: { paddingHorizontal: 16, paddingVertical: 14, borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
+  row: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
 });

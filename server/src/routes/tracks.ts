@@ -26,7 +26,13 @@ router.get('/', async (req, res) => {
     durationMs: t.duration_ms,
     albumId: null,
     artistId: null,
-    album: t.album ? { id: t.album, name: t.album, images: t.spotify_image_url ? JSON.stringify([{ url: t.spotify_image_url, width: 640, height: 640 }]) : null } : null,
+    album: t.album
+      ? {
+          id: t.album,
+          name: t.album,
+          images: t.spotify_image_url ? JSON.stringify([{ url: t.spotify_image_url, width: 640, height: 640 }]) : null,
+        }
+      : null,
     artist: t.artists && t.artists.length ? { id: t.artists[0], name: t.artists[0] } : null,
   }));
   res.json(mapped);
@@ -42,7 +48,15 @@ router.get('/:id', async (req, res) => {
     id: data.id,
     title: data.title,
     durationMs: data.duration_ms,
-    album: data.album ? { id: data.album, name: data.album, images: data.spotify_image_url ? JSON.stringify([{ url: data.spotify_image_url, width: 640, height: 640 }]) : null } : null,
+    album: data.album
+      ? {
+          id: data.album,
+          name: data.album,
+          images: data.spotify_image_url
+            ? JSON.stringify([{ url: data.spotify_image_url, width: 640, height: 640 }])
+            : null,
+        }
+      : null,
     artist: data.artists && data.artists.length ? { id: data.artists[0], name: data.artists[0] } : null,
   });
 });
@@ -53,7 +67,9 @@ router.get('/:id/stream', async (req, res) => {
   const { data, error } = await sb.from('tracks').select('local_path').eq('id', req.params.id).maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   if (!data || !data.local_path) return res.status(404).json({ error: 'Not found' });
-  const abs = path.isAbsolute(data.local_path) ? data.local_path : path.join(process.env.MEDIA_DIR || path.join(process.cwd(), 'media'), data.local_path);
+  const abs = path.isAbsolute(data.local_path)
+    ? data.local_path
+    : path.join(process.env.MEDIA_DIR || path.join(process.cwd(), 'media'), data.local_path);
   try {
     if (!fs.existsSync(abs)) return res.status(404).json({ error: 'File not found on disk' });
     const contentType = mime.lookup(abs) || 'audio/mpeg';
@@ -67,7 +83,11 @@ router.get('/:id/artwork', async (req, res) => {
   const sb = getSupabase();
   if (!sb) return res.status(500).json({ error: 'supabase_not_configured' });
 
-  const { data, error } = await sb.from('tracks').select('local_path, spotify_image_url').eq('id', req.params.id).maybeSingle();
+  const { data, error } = await sb
+    .from('tracks')
+    .select('local_path, spotify_image_url')
+    .eq('id', req.params.id)
+    .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'Not found' });
 
@@ -77,7 +97,9 @@ router.get('/:id/artwork', async (req, res) => {
 
   if (!data.local_path) return res.status(404).json({ error: 'No local file' });
 
-  const abs = path.isAbsolute(data.local_path) ? data.local_path : path.join(process.env.MEDIA_DIR || path.join(process.cwd(), 'media'), data.local_path);
+  const abs = path.isAbsolute(data.local_path)
+    ? data.local_path
+    : path.join(process.env.MEDIA_DIR || path.join(process.cwd(), 'media'), data.local_path);
   try {
     if (!fs.existsSync(abs)) return res.status(404).json({ error: 'File not found on disk' });
     const meta = await parseFile(abs, { duration: false });

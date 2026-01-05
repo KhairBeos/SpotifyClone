@@ -20,12 +20,29 @@ function formatTime(ms: number) {
 
 export default function NowPlayingScreen() {
   const insets = useSafeAreaInsets();
-  const { currentTrack, positionMillis, durationMillis, togglePlay, next, prev, isPlaying, seek, shuffle, repeatMode, toggleShuffle, cycleRepeatMode, queue, index } = usePlayerStore();
+  const {
+    currentTrack,
+    positionMillis,
+    durationMillis,
+    togglePlay,
+    next,
+    prev,
+    isPlaying,
+    seek,
+    shuffle,
+    repeatMode,
+    toggleShuffle,
+    cycleRepeatMode,
+    queue,
+    index,
+  } = usePlayerStore();
   const nav = useNavigation();
   const [seeking, setSeeking] = useState<number | null>(null);
   const { isFavorite, toggleFavorite, hydrate } = useLibraryStore();
 
-  React.useEffect(() => { hydrate(); }, [hydrate]);
+  React.useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   const progress = useMemo(() => {
     const pos = seeking ?? positionMillis;
@@ -72,13 +89,21 @@ export default function NowPlayingScreen() {
           <Ionicons name="chevron-down" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Now Playing</Text>
-        <TouchableOpacity disabled={!currentTrack} onPress={() => { if (currentTrack) toggleFavorite(currentTrack); }}>
+        <TouchableOpacity
+          disabled={!currentTrack}
+          onPress={() => {
+            if (currentTrack) toggleFavorite(currentTrack);
+          }}
+        >
           <Ionicons name={liked ? 'heart' : 'heart-outline'} size={24} color={liked ? colors.primary : colors.text} />
         </TouchableOpacity>
       </View>
 
       {/* Main Content */}
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]} scrollEnabled={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}
+        scrollEnabled={false}
+      >
         {/* Album Artwork */}
         <View style={styles.artworkWrapper}>
           <View style={styles.artworkShadow}>
@@ -93,10 +118,19 @@ export default function NowPlayingScreen() {
         {/* Track Info */}
         <View style={styles.infoSection}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title} numberOfLines={2}>{currentTrack.title}</Text>
-            <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist}</Text>
+            <Text style={styles.title} numberOfLines={2}>
+              {currentTrack.title}
+            </Text>
+            <Text style={styles.artist} numberOfLines={1}>
+              {currentTrack.artist}
+            </Text>
           </View>
-          <TouchableOpacity onPress={() => { Haptics.selectionAsync(); toggleFavorite(currentTrack); }}>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.selectionAsync();
+              toggleFavorite(currentTrack);
+            }}
+          >
             <Ionicons name={liked ? 'heart' : 'heart-outline'} size={24} color={liked ? colors.primary : colors.text} />
           </TouchableOpacity>
         </View>
@@ -120,22 +154,38 @@ export default function NowPlayingScreen() {
           />
           <View style={styles.timeRow}>
             <Text style={styles.time}>{formatTime(seeking ?? positionMillis)}</Text>
-            <Text style={styles.time}>{formatTime(Math.max(0, (durationMillis || 0) - (seeking ?? positionMillis)))}</Text>
+            <Text style={styles.time}>
+              {formatTime(Math.max(0, (durationMillis || 0) - (seeking ?? positionMillis)))}
+            </Text>
           </View>
         </View>
 
         {/* Controls */}
         <View style={styles.controlsSection}>
-          <TouchableOpacity style={[styles.smallBtn, shuffle && styles.activeBtn]} onPress={() => { Haptics.selectionAsync(); toggleShuffle(); }}>
+          <TouchableOpacity
+            style={[styles.smallBtn, shuffle && styles.activeBtn]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              toggleShuffle();
+            }}
+          >
             <Ionicons name="shuffle" size={22} color={shuffle ? colors.primary : '#A7A7A7'} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.smallBtn, !hasPrev && styles.disabledBtn]} onPress={handlePrev} disabled={!hasPrev && positionMillis <= 3000}>
-            <Ionicons name="play-skip-back-sharp" size={28} color={!hasPrev && positionMillis <= 3000 ? '#555' : colors.text} />
+          <TouchableOpacity
+            style={[styles.smallBtn, !hasPrev && styles.disabledBtn]}
+            onPress={handlePrev}
+            disabled={!hasPrev && positionMillis <= 3000}
+          >
+            <Ionicons
+              name="play-skip-back-sharp"
+              size={28}
+              color={!hasPrev && positionMillis <= 3000 ? '#555' : colors.text}
+            />
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.playBtn} 
+          <TouchableOpacity
+            style={styles.playBtn}
             onPress={() => {
               Haptics.selectionAsync();
               togglePlay();
@@ -144,17 +194,23 @@ export default function NowPlayingScreen() {
             <Ionicons name={isPlaying ? 'pause' : 'play'} size={40} color={colors.background} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.smallBtn, !hasNext && styles.disabledBtn]} onPress={handleNext} disabled={!hasNext}>
+          <TouchableOpacity
+            style={[styles.smallBtn, !hasNext && styles.disabledBtn]}
+            onPress={handleNext}
+            disabled={!hasNext}
+          >
             <Ionicons name="play-skip-forward-sharp" size={28} color={!hasNext ? '#555' : colors.text} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.smallBtn, repeatMode !== 'off' && styles.activeBtn]} onPress={() => { Haptics.selectionAsync(); cycleRepeatMode(); }}>
+          <TouchableOpacity
+            style={[styles.smallBtn, repeatMode !== 'off' && styles.activeBtn]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              cycleRepeatMode();
+            }}
+          >
             <View>
-              <Ionicons 
-                name={'repeat'} 
-                size={22} 
-                color={repeatMode !== 'off' ? colors.primary : '#A7A7A7'} 
-              />
+              <Ionicons name={'repeat'} size={22} color={repeatMode !== 'off' ? colors.primary : '#A7A7A7'} />
               {repeatMode === 'track' && (
                 <View style={styles.repeatBadge}>
                   <Text style={styles.repeatBadgeText}>1</Text>
@@ -185,20 +241,20 @@ export default function NowPlayingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 16,
   },
-  containerEmpty: { 
-    flex: 1, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
+  containerEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.background,
     flexDirection: 'column',
     gap: 12,
   },
-  empty: { 
+  empty: {
     color: '#A7A7A7',
     fontSize: 16,
   },
@@ -244,28 +300,28 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 12,
   },
-  title: { 
-    color: colors.text, 
-    fontSize: 22, 
+  title: {
+    color: colors.text,
+    fontSize: 22,
     fontWeight: '700',
     marginBottom: 6,
   },
-  artist: { 
-    color: '#A7A7A7', 
+  artist: {
+    color: '#A7A7A7',
     fontSize: 14,
   },
   sliderSection: {
     marginBottom: 24,
   },
-  timeRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+  timeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 8,
     paddingHorizontal: 4,
   },
-  time: { 
-    color: '#A7A7A7', 
-    fontSize: 12 
+  time: {
+    color: '#A7A7A7',
+    fontSize: 12,
   },
   controlsSection: {
     flexDirection: 'row',

@@ -45,7 +45,13 @@ async function ensureSetup() {
     android: {
       appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
     },
-    capabilities: [Capability.Play, Capability.Pause, Capability.SkipToNext, Capability.SkipToPrevious, Capability.SeekTo],
+    capabilities: [
+      Capability.Play,
+      Capability.Pause,
+      Capability.SkipToNext,
+      Capability.SkipToPrevious,
+      Capability.SeekTo,
+    ],
     progressUpdateEventInterval: 1,
   });
   initialized = true;
@@ -77,12 +83,22 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   loadQueue: async (tracks, startIndex = 0) => {
     await ensureSetup();
 
-    set({ queue: tracks, baseQueue: tracks.slice(), index: startIndex, currentTrack: tracks[startIndex] ?? null, isPlaying: false, positionMillis: 0, durationMillis: 0 });
+    set({
+      queue: tracks,
+      baseQueue: tracks.slice(),
+      index: startIndex,
+      currentTrack: tracks[startIndex] ?? null,
+      isPlaying: false,
+      positionMillis: 0,
+      durationMillis: 0,
+    });
 
     const track = tracks[startIndex];
     if (!track) return;
     await TrackPlayer.reset();
-    await TrackPlayer.add(tracks.map((t, i) => ({ id: String(i), url: t.uri, title: t.title, artist: t.artist, artwork: t.artwork })));
+    await TrackPlayer.add(
+      tracks.map((t, i) => ({ id: String(i), url: t.uri, title: t.title, artist: t.artist, artwork: t.artwork }))
+    );
     await TrackPlayer.skip(startIndex);
     const sub1 = TrackPlayer.addEventListener(Event.PlaybackProgressUpdated, (e) => {
       set({ positionMillis: Math.round(e.position * 1000), durationMillis: Math.round((e.duration ?? 0) * 1000) });
@@ -92,14 +108,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       set({ isPlaying: state.state === 'playing' || (state as any) === 3 });
     });
     // We don't keep refs to remove; RNTP cleans listeners per reset, and app lifetime is fine here.
-    try { await AsyncStorage.setItem('player_state', JSON.stringify({ queue: tracks, index: startIndex })); } catch {}
+    try {
+      await AsyncStorage.setItem('player_state', JSON.stringify({ queue: tracks, index: startIndex }));
+    } catch {}
   },
 
   play: async () => {
     const st = get();
     if (!st.currentTrack) return;
     await TrackPlayer.play();
-    try { const st = get(); await AsyncStorage.setItem('player_state', JSON.stringify({ queue: st.queue, index: st.index })); } catch {}
+    try {
+      const st = get();
+      await AsyncStorage.setItem('player_state', JSON.stringify({ queue: st.queue, index: st.index }));
+    } catch {}
   },
 
   pause: async () => {
@@ -110,9 +131,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const st = get();
     if (!st.currentTrack) return;
     const state = await TrackPlayer.getPlaybackState();
-    // state.state may be 'playing' or numeric depending on RNTP version used
     const isPlaying = (state as any).state ? (state as any).state === 'playing' : (state as any) === 3;
-    if (isPlaying) await TrackPlayer.pause(); else await TrackPlayer.play();
+    if (isPlaying) await TrackPlayer.pause();
+    else await TrackPlayer.play();
   },
 
   seek: async (millis: number) => {
@@ -126,7 +147,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     await TrackPlayer.skip(nextIndex);
     set({ index: nextIndex, currentTrack: queue[nextIndex] });
     await TrackPlayer.play();
-    try { const st = get(); await AsyncStorage.setItem('player_state', JSON.stringify({ queue: st.queue, index: st.index })); } catch {}
+    try {
+      const st = get();
+      await AsyncStorage.setItem('player_state', JSON.stringify({ queue: st.queue, index: st.index }));
+    } catch {}
   },
 
   prev: async () => {
@@ -136,7 +160,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     await TrackPlayer.skip(prevIndex);
     set({ index: prevIndex, currentTrack: queue[prevIndex] });
     await TrackPlayer.play();
-    try { const st = get(); await AsyncStorage.setItem('player_state', JSON.stringify({ queue: st.queue, index: st.index })); } catch {}
+    try {
+      const st = get();
+      await AsyncStorage.setItem('player_state', JSON.stringify({ queue: st.queue, index: st.index }));
+    } catch {}
   },
   playAt: async (idx: number) => {
     const { queue } = get();
@@ -144,7 +171,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     await TrackPlayer.skip(idx);
     set({ index: idx, currentTrack: queue[idx] });
     await TrackPlayer.play();
-    try { const st = get(); await AsyncStorage.setItem('player_state', JSON.stringify({ queue: st.queue, index: st.index })); } catch {}
+    try {
+      const st = get();
+      await AsyncStorage.setItem('player_state', JSON.stringify({ queue: st.queue, index: st.index }));
+    } catch {}
   },
   removeAt: (idx: number) => {
     const { queue, index } = get();
@@ -171,7 +201,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return;
     }
     if (!shuffle) {
-      // Enable shuffle: keep current at the start
       const rest = queue.filter((_, i) => i !== index);
       for (let i = rest.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -181,8 +210,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       await loadQueue(newQueue, 0);
       set({ shuffle: true });
     } else {
-      // Disable shuffle: restore base order and jump to current track's index
-      const targetIndex = Math.max(0, baseQueue.findIndex(t => t.id === current.id));
+      const targetIndex = Math.max(
+        0,
+        baseQueue.findIndex((t) => t.id === current.id)
+      );
       await loadQueue(baseQueue.slice(), targetIndex >= 0 ? targetIndex : 0);
       set({ shuffle: false });
     }
@@ -191,6 +222,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const m = get().repeatMode;
     const next = m === 'off' ? 'queue' : m === 'queue' ? 'track' : 'off';
     set({ repeatMode: next });
-    await TrackPlayer.setRepeatMode(next === 'off' ? RepeatMode.Off : next === 'queue' ? RepeatMode.Queue : RepeatMode.Track);
+    await TrackPlayer.setRepeatMode(
+      next === 'off' ? RepeatMode.Off : next === 'queue' ? RepeatMode.Queue : RepeatMode.Track
+    );
   },
 }));

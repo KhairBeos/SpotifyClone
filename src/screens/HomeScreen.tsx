@@ -15,7 +15,8 @@ export default function HomeScreen() {
 
   useEffect(() => {
     setLoading(true);
-    api.getRecentTracks(12)
+    api
+      .getRecentTracks(12)
       .then((items) => setRecent(items))
       .catch(() => setRecent([]))
       .finally(() => setLoading(false));
@@ -37,9 +38,11 @@ export default function HomeScreen() {
   function tryParseArtwork(imagesJson?: string | null): string | undefined {
     if (!imagesJson) return undefined;
     try {
-      const arr = JSON.parse(imagesJson) as Array<{url:string;width:number;height:number}>;
+      const arr = JSON.parse(imagesJson) as Array<{ url: string; width: number; height: number }>;
       return arr?.[1]?.url || arr?.[0]?.url;
-    } catch { return undefined; }
+    } catch {
+      return undefined;
+    }
   }
 
   function pickArtworkOrFallback(t: ServerTrack) {
@@ -49,7 +52,7 @@ export default function HomeScreen() {
   return (
     <ScrollView style={[styles.container, { paddingTop: insets.top }]} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Good to see you</Text>
-      
+
       <Text style={styles.sectionTitle}>Recently Played</Text>
       {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />}
       {!loading && recent && recent.length > 0 && (
@@ -59,13 +62,13 @@ export default function HomeScreen() {
           renderItem={({ item: t, index }) => {
             const artwork = tryParseArtwork(t.album?.images);
             return (
-              <TrackListItem 
+              <TrackListItem
                 key={t.id}
-                track={{ 
-                  id: t.id, 
-                  title: t.title, 
-                  artist: t.artist?.name || 'Unknown Artist', 
-                  uri: api.streamUrl(t.id), 
+                track={{
+                  id: t.id,
+                  title: t.title,
+                  artist: t.artist?.name || 'Unknown Artist',
+                  uri: api.streamUrl(t.id),
                   artwork: artwork || api.artworkUrl(t.id),
                 }}
                 customOnPress={() => handlePlayTrack(t, index)}
@@ -103,29 +106,28 @@ export default function HomeScreen() {
       </View>
     </ScrollView>
   );
-
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  content: { 
+  content: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingBottom: 120,
   },
-  title: { 
-    color: colors.text, 
-    fontSize: 28, 
-    fontWeight: '700', 
-    marginBottom: 20 
+  title: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 20,
   },
-  sectionTitle: { 
-    color: colors.text, 
-    fontSize: 16, 
-    fontWeight: '600', 
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: 10,
     marginTop: 12,
   },
@@ -134,11 +136,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
   },
-  card: { 
+  card: {
     flex: 1,
     height: 100,
-    backgroundColor: colors.surface, 
-    borderRadius: 8, 
+    backgroundColor: colors.surface,
+    borderRadius: 8,
     justifyContent: 'flex-end',
     padding: 12,
   },

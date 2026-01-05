@@ -16,24 +16,42 @@ export default function LibraryScreen() {
   const [artistFallbackArt, setArtistFallbackArt] = useState<Record<string, string>>({});
   const { favorites, playlists, hydrate, ensureDefaultPlaylist } = useLibraryStore();
 
-  useEffect(() => { hydrate(); }, [hydrate]);
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
     Promise.all([api.getArtists(), api.getAlbums()])
-      .then(([as, al]) => { if (mounted) { setArtists(as); setAlbums(al); } })
-      .catch(() => { if (mounted) { setArtists([] as ServerArtist[]); setAlbums([] as ServerAlbum[]); } })
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+      .then(([as, al]) => {
+        if (mounted) {
+          setArtists(as);
+          setAlbums(al);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setArtists([] as ServerArtist[]);
+          setAlbums([] as ServerAlbum[]);
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   function parseArtwork(imagesJson?: string | Array<{ url: string }> | null): string | undefined {
     if (!imagesJson) return undefined;
     try {
-      const arr = Array.isArray(imagesJson) ? imagesJson : JSON.parse(imagesJson) as Array<{url:string}>;
+      const arr = Array.isArray(imagesJson) ? imagesJson : (JSON.parse(imagesJson) as Array<{ url: string }>);
       return arr?.[1]?.url || arr?.[0]?.url;
-    } catch { return undefined; }
+    } catch {
+      return undefined;
+    }
   }
 
   useEffect(() => {
@@ -43,32 +61,38 @@ export default function LibraryScreen() {
     if (targets.length === 0) return;
 
     (async () => {
-      const results = await Promise.all(targets.map(async (a) => {
-        try {
-          // Prefer artist images from detail endpoint (will include Spotify images if available)
-          const detail = await api.getArtist(a.id);
-          const artFromDetail = parseArtwork(detail.images as any);
-          if (artFromDetail) return { id: a.id, art: artFromDetail };
+      const results = await Promise.all(
+        targets.map(async (a) => {
+          try {
+            // Prefer artist images from detail endpoint (will include Spotify images if available)
+            const detail = await api.getArtist(a.id);
+            const artFromDetail = parseArtwork(detail.images as any);
+            if (artFromDetail) return { id: a.id, art: artFromDetail };
 
-          // Secondary fallback: use first track's cover if artist images truly missing
-          const tracks = await api.getArtistTracks(a.id);
-          const first = tracks?.[0];
-          if (!first) return { id: a.id, art: undefined };
-          const parsed = parseArtwork(first.album?.images);
-          return { id: a.id, art: parsed || api.artworkUrl(first.id) };
-        } catch {
-          return { id: a.id, art: undefined };
-        }
-      }));
+            // Secondary fallback: use first track's cover if artist images truly missing
+            const tracks = await api.getArtistTracks(a.id);
+            const first = tracks?.[0];
+            if (!first) return { id: a.id, art: undefined };
+            const parsed = parseArtwork(first.album?.images);
+            return { id: a.id, art: parsed || api.artworkUrl(first.id) };
+          } catch {
+            return { id: a.id, art: undefined };
+          }
+        })
+      );
       if (cancelled) return;
       const updates: Record<string, string> = {};
-      results.forEach(({ id, art }) => { if (art) updates[id] = art; });
+      results.forEach(({ id, art }) => {
+        if (art) updates[id] = art;
+      });
       if (Object.keys(updates).length) {
         setArtistFallbackArt((prev) => ({ ...prev, ...updates }));
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [artists]);
 
   const handleArtistPress = (artist: ServerArtist) => {
@@ -111,8 +135,8 @@ export default function LibraryScreen() {
                   const art = parseArtwork(a.images) || artistFallbackArt[a.id];
                   const initial = a.name?.[0]?.toUpperCase() || '';
                   return (
-                    <TouchableOpacity 
-                      key={a.id} 
+                    <TouchableOpacity
+                      key={a.id}
                       style={styles.artistCard}
                       onPress={() => handleArtistPress(a)}
                       activeOpacity={0.7}
@@ -124,7 +148,9 @@ export default function LibraryScreen() {
                           <Text style={styles.placeholderText}>{initial}</Text>
                         </View>
                       )}
-                      <Text style={styles.artistName} numberOfLines={2}>{a.name}</Text>
+                      <Text style={styles.artistName} numberOfLines={2}>
+                        {a.name}
+                      </Text>
                       <Text style={styles.cardLabel}>Artist</Text>
                     </TouchableOpacity>
                   );
@@ -139,8 +165,8 @@ export default function LibraryScreen() {
               <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Albums</Text>
               <View style={styles.albumsGrid}>
                 {albums.slice(0, 8).map((al) => (
-                  <TouchableOpacity 
-                    key={al.id} 
+                  <TouchableOpacity
+                    key={al.id}
                     style={styles.albumCard}
                     onPress={() => handleAlbumPress(al)}
                     activeOpacity={0.7}
@@ -149,7 +175,9 @@ export default function LibraryScreen() {
                       source={{ uri: parseArtwork(al.images) || 'https://via.placeholder.com/140' }}
                       style={styles.albumImage}
                     />
-                    <Text style={styles.albumName} numberOfLines={2}>{al.name}</Text>
+                    <Text style={styles.albumName} numberOfLines={2}>
+                      {al.name}
+                    </Text>
                     <Text style={styles.cardLabel}>Album</Text>
                   </TouchableOpacity>
                 ))}
@@ -172,7 +200,9 @@ export default function LibraryScreen() {
                 <Text style={styles.playlistEmoji}>🎵</Text>
               </View>
               <Text style={styles.playlistName}>My Playlist</Text>
-              <Text style={styles.cardLabel}>{(playlists.find(p => p.id === 'default-playlist')?.tracks.length) || 0} tracks</Text>
+              <Text style={styles.cardLabel}>
+                {playlists.find((p) => p.id === 'default-playlist')?.tracks.length || 0} tracks
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -189,9 +219,9 @@ export default function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
   header: {
     paddingHorizontal: 16,
@@ -204,7 +234,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
   },
-  content: { 
+  content: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingBottom: 100,
