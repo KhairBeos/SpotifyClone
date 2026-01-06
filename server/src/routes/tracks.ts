@@ -2,7 +2,6 @@ import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
 import mime from 'mime-types';
-import { parseFile } from 'music-metadata';
 import { streamFileWithRange } from '../middleware/rangeStream';
 import { getSupabase } from '../lib/supabase';
 
@@ -64,9 +63,21 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/stream', async (req, res) => {
   const sb = getSupabase();
   if (!sb) return res.status(500).json({ error: 'supabase_not_configured' });
-  const { data, error } = await sb.from('tracks').select('local_path').eq('id', req.params.id).maybeSingle();
+  const { data, error } = await sb.from('tracks').select('audio_url, local_path').eq('id', req.params.id).maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
-  if (!data || !data.local_path) return res.status(404).json({ error: 'Not found' });
+  if (!data) return res.status(404).json({ error: 'Not found' });
+
+  // Priority 1: audio_url (Supabase Storage - cloud)
+  if (data.audio_url) {
+    return res.redirect(302, data.audio_url);
+  }
+
+  // Fallback: local file (dev only)
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction || !data.local_path) {
+    return res.status(404).json({ error: 'Audio not available' });
+  }
+
   const abs = path.isAbsolute(data.local_path)
     ? data.local_path
     : path.join(process.env.MEDIA_DIR || path.join(process.cwd(), 'media'), data.local_path);
@@ -85,35 +96,23 @@ router.get('/:id/artwork', async (req, res) => {
 
   const { data, error } = await sb
     .from('tracks')
-    .select('spotify_image_url, local_path')
+    .select('artwork_url, spotify_image_url')
     .eq('id', req.params.id)
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'Not found' });
 
-  // Priority 1: Spotify image URL
+  // Priority 1: artwork_url (Supabase Storage - uploaded from script)
+  if (data.artwork_url) {
+    return res.redirect(302, data.artwork_url);
+  }
+
+  // Priority 2: spotify_image_url
   if (data.spotify_image_url) {
     return res.redirect(302, data.spotify_image_url);
   }
 
-  // Fallback 2: Embedded artwork from MP3 file
-  if (!data.local_path) return res.status(404).json({ error: 'No artwork available' });
-
-  const abs = path.isAbsolute(data.local_path)
-    ? data.local_path
-    : path.join(process.env.MEDIA_DIR || path.join(process.cwd(), 'media'), data.local_path);
-  try {
-    if (!fs.existsSync(abs)) return res.status(404).json({ error: 'File not found on disk' });
-    const meta = await parseFile(abs, { duration: false });
-    const picture = meta.common.picture?.[0];
-    if (!picture || !picture.data) return res.status(404).json({ error: 'No artwork in file' });
-
-    res.setHeader('Content-Type', picture.format || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=604800');
-    return res.end(picture.data);
-  } catch (e) {
-    return res.status(500).json({ error: 'artwork_failed', detail: String(e) });
-  }
+  return res.status(404).json({ error: 'No artwork available' });
 });
 
 router.patch('/:id', async (req, res) => {

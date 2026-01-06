@@ -8,11 +8,11 @@ const { parseFile } = require('music-metadata');
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE;
 const MEDIA_DIR = process.env.MEDIA_DIR || path.join(process.cwd(), 'media');
-const BUCKET = process.env.SUPABASE_BUCKET;
+const BUCKET = process.env.SUPABASE_BUCKET_ARTWORK || 'track-artwork';
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || '3', 10);
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in the environment');
+  console.error('SUPABASE_URL and SUPABASE_SERVICE_ROLE must be set in the environment');
   process.exit(1);
 }
 
@@ -92,7 +92,8 @@ async function getTracksToProcess() {
               return;
             }
 
-            const { publicURL } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+            const { data: pubData } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+            const publicURL = pubData?.publicUrl || `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filePath}`;
             await supabase.from('tracks').update({ artwork_url: publicURL }).eq('id', track.id);
             console.log(`Track ${track.id}: uploaded artwork -> ${publicURL}`);
           } catch (e) {
