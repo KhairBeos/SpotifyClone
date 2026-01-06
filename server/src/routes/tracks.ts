@@ -85,17 +85,19 @@ router.get('/:id/artwork', async (req, res) => {
 
   const { data, error } = await sb
     .from('tracks')
-    .select('local_path, spotify_image_url')
+    .select('spotify_image_url, local_path')
     .eq('id', req.params.id)
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'Not found' });
 
+  // Priority 1: Spotify image URL
   if (data.spotify_image_url) {
     return res.redirect(302, data.spotify_image_url);
   }
 
-  if (!data.local_path) return res.status(404).json({ error: 'No local file' });
+  // Fallback 2: Embedded artwork from MP3 file
+  if (!data.local_path) return res.status(404).json({ error: 'No artwork available' });
 
   const abs = path.isAbsolute(data.local_path)
     ? data.local_path
@@ -104,7 +106,7 @@ router.get('/:id/artwork', async (req, res) => {
     if (!fs.existsSync(abs)) return res.status(404).json({ error: 'File not found on disk' });
     const meta = await parseFile(abs, { duration: false });
     const picture = meta.common.picture?.[0];
-    if (!picture || !picture.data) return res.status(404).json({ error: 'No embedded artwork' });
+    if (!picture || !picture.data) return res.status(404).json({ error: 'No artwork in file' });
 
     res.setHeader('Content-Type', picture.format || 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=604800');
