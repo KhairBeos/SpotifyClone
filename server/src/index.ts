@@ -13,7 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = Number(process.env.PORT || 4000);
+const PORT = Number(process.env.PORT);
 const MEDIA_DIR = process.env.MEDIA_DIR || path.join(process.cwd(), 'media');
 
 app.get('/health', async (_req, res) => {
