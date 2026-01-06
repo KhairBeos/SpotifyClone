@@ -5,11 +5,10 @@ const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const { parseFile } = require('music-metadata');
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.SUPABASE_PUBLIC_URL;
-const SUPABASE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE;
 const MEDIA_DIR = process.env.MEDIA_DIR || path.join(process.cwd(), 'media');
-const BUCKET = process.env.SUPABASE_BUCKET || 'track-artwork';
+const BUCKET = process.env.SUPABASE_BUCKET;
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || '3', 10);
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -25,7 +24,6 @@ async function getTracksToProcess() {
     .select('id, local_path, spotify_image_url, artwork_url')
     .is('local_path', null)
     .not('spotify_image_url', 'is', null);
-  // above filter is wrong placeholder; we'll instead fetch all with local_path and no artwork_url
 }
 
 (async function main() {
@@ -60,7 +58,6 @@ async function getTracksToProcess() {
         (async (track) => {
           try {
             if (track.spotify_image_url) {
-              // skip - prefer external spotify image
               await supabase.from('tracks').update({ artwork_url: track.spotify_image_url }).eq('id', track.id);
               console.log(`Track ${track.id}: set artwork_url from spotify_image_url`);
               return;
